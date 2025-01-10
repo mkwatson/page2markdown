@@ -1,6 +1,6 @@
 import TurndownService from 'turndown';
 
-(function () {
+export default (function () {
   // 1. Create a new Turndown instance
   const turndownService = new TurndownService();
 
