@@ -36,88 +36,89 @@ export default (function () {
   // 8. Combine metadata and body Markdown
   const fullMarkdown = metadataSection + bodyMarkdown;
 
-  // 9. Open a new tab and display the Markdown content with a "Copy Markdown" button
-  const newTab = window.open();
-
-  if (newTab) {
-    newTab.document.write(`
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <title>Converted Markdown</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            padding: 0;
-            background-color: #f9f9f9;
-          }
-          #copyButton {
-            padding: 10px 20px;
-            font-size: 16px;
-            margin-bottom: 20px;
-            cursor: pointer;
-            background-color: #36c;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-          }
-          #copyButton:hover {
-            background-color: #3056a9;
-          }
-          pre {
-            background-color: #fff;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            overflow: auto;
-            max-height: 80vh;
-          }
-        </style>
-      </head>
-      <body>
-        <button id="copyButton">Copy Markdown</button>
-        <pre id="markdownContent">${fullMarkdown}</pre>
-        
-        <script>
-          // Function to copy text to clipboard
-          function copyToClipboard(text) {
-            if (!navigator.clipboard) {
-              // Fallback for browsers that do not support navigator.clipboard
-              const textarea = document.createElement('textarea');
-              textarea.value = text;
-              textarea.style.position = 'fixed';  // Prevent scrolling to bottom of page in MS Edge.
-              document.body.appendChild(textarea);
-              textarea.focus();
-              textarea.select();
-              try {
-                document.execCommand('copy');
-                alert('Markdown copied to clipboard!');
-              } catch (err) {
-                alert('Failed to copy Markdown.');
-              }
-              document.body.removeChild(textarea);
-              return;
-            }
-            navigator.clipboard.writeText(text).then(function() {
+  // 9. Create the HTML for the new tab
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <title>Converted Markdown</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          margin: 20px;
+          padding: 0;
+          background-color: #f9f9f9;
+        }
+        #copyButton {
+          padding: 10px 20px;
+          font-size: 16px;
+          margin-bottom: 20px;
+          cursor: pointer;
+          background-color: #36c;
+          color: #fff;
+          border: none;
+          border-radius: 4px;
+        }
+        #copyButton:hover {
+          background-color: #3056a9;
+        }
+        pre {
+          background-color: #fff;
+          padding: 15px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          overflow: auto;
+          max-height: 80vh;
+        }
+      </style>
+    </head>
+    <body>
+      <button id="copyButton">Copy Markdown</button>
+      <pre id="markdownContent">${fullMarkdown}</pre>
+      
+      <script>
+        // Function to copy text to clipboard
+        function copyToClipboard(text) {
+          if (!navigator.clipboard) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            try {
+              document.execCommand('copy');
               alert('Markdown copied to clipboard!');
-            }, function(err) {
+            } catch (err) {
               alert('Failed to copy Markdown.');
-            });
+            }
+            document.body.removeChild(textarea);
+            return;
           }
-
-          // Add event listener to the copy button
-          document.getElementById('copyButton').addEventListener('click', function() {
-            const markdown = document.getElementById('markdownContent').innerText;
-            copyToClipboard(markdown);
+          navigator.clipboard.writeText(text).then(function() {
+            alert('Markdown copied to clipboard!');
+          }, function(err) {
+            alert('Failed to copy Markdown.');
           });
-        </script>
-      </body>
-      </html>
-    `);
-    newTab.document.close();
-  } else {
+        }
+        document.getElementById('copyButton').addEventListener('click', function() {
+          const markdown = document.getElementById('markdownContent').innerText;
+          copyToClipboard(markdown);
+        });
+      </script>
+    </body>
+    </html>
+  `;
+
+  // 10. Create a Blob from the HTML content and generate a URL for it
+  const blob = new Blob([htmlContent], { type: 'text/html' });
+  const blobUrl = URL.createObjectURL(blob);
+
+  // 11. Open a new tab using the Blob URL (isolated from the original page's context)
+  const newTab = window.open(blobUrl, '_blank', 'noopener,noreferrer');
+
+  if (!newTab) {
     console.error('Failed to open a new tab. Please allow popups for this site.');
   }
 })();

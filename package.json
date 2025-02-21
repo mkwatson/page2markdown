@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build": "webpack && node scripts/build-bookmarklet.js"
+    "build": "webpack --mode production && node scripts/build-bookmarklet.js"
   },
   "keywords": [],
   "author": "",
