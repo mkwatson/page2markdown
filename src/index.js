@@ -1,42 +1,43 @@
 import TurndownService from 'turndown';
+import { Readability } from '@mozilla/readability';
 
 export default (function () {
-  // 1. Create a new Turndown instance
+  // 1. Load Readability and Turndown
   const turndownService = new TurndownService();
 
-  // 2. Add a rule to remove <style>, <script>, and <link> tags entirely
-  turndownService.addRule('removeStylesScriptsLinks', {
-    filter: ['style', 'script', 'link'],
-    replacement: () => ''
+  // 2. Add rule to remove <style>, <script>, <link>, <iframe>, and <noscript> tags
+  turndownService.addRule('removeNoiseElements', {
+    filter: ['style', 'script', 'link', 'iframe', 'noscript'],
+    replacement: () => '',
   });
 
-  // 3. Add a rule to remove inline 'style' attributes from all elements
+  // 3. Remove inline 'style' attributes from elements
   turndownService.addRule('removeInlineStyles', {
     filter: (node) => node.nodeType === 1 && node.hasAttribute('style'),
     replacement: (content, node) => {
-      // Remove the 'style' attribute
       node.removeAttribute('style');
-      // Return the node's HTML without styles
       return turndownService.turndown(node.outerHTML);
-    }
+    },
   });
 
-  // 4. Grab the document title
+  // 4. Get document title
   const docTitle = document.title;
 
-  // 5. Build the metadata section with only the title in Markdown format
-  const metadataSection = `# ${docTitle}\n\n`;
+  // 5. Extract main content using Readability
+  const reader = new Readability(document.cloneNode(true));
+  const article = reader.parse();
+  const contentToConvert = article?.content || document.body.innerHTML;
 
-  // 6. Grab the full HTML of the page
-  const docHtml = document.documentElement.outerHTML;
+  // 6. Build metadata section
+  const metadataSection = `# ${article?.title || docTitle}\n\n`;
 
-  // 7. Convert the filtered HTML to Markdown
-  const bodyMarkdown = turndownService.turndown(docHtml);
+  // 7. Convert extracted content to Markdown
+  const bodyMarkdown = turndownService.turndown(contentToConvert);
 
   // 8. Combine metadata and body Markdown
   const fullMarkdown = metadataSection + bodyMarkdown;
 
-  // 9. Create the HTML for the new tab
+  // 9. Create HTML for new tab
   const htmlContent = `
     <!DOCTYPE html>
     <html lang="en">
@@ -44,61 +45,20 @@ export default (function () {
       <meta charset="UTF-8">
       <title>Converted Markdown</title>
       <style>
-        body {
-          font-family: Arial, sans-serif;
-          margin: 20px;
-          padding: 0;
-          background-color: #f9f9f9;
-        }
-        #copyButton {
-          padding: 10px 20px;
-          font-size: 16px;
-          margin-bottom: 20px;
-          cursor: pointer;
-          background-color: #36c;
-          color: #fff;
-          border: none;
-          border-radius: 4px;
-        }
-        #copyButton:hover {
-          background-color: #3056a9;
-        }
-        pre {
-          background-color: #fff;
-          padding: 15px;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          overflow: auto;
-          max-height: 80vh;
-        }
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f9f9f9; }
+        #copyButton { padding: 10px 20px; font-size: 16px; margin-bottom: 20px; cursor: pointer; background-color: #36c; color: #fff; border: none; border-radius: 4px; }
+        #copyButton:hover { background-color: #3056a9; }
+        pre { background-color: #fff; padding: 15px; border: 1px solid #ddd; border-radius: 4px; overflow: auto; max-height: 80vh; }
       </style>
     </head>
     <body>
       <button id="copyButton">Copy Markdown</button>
       <pre id="markdownContent">${fullMarkdown}</pre>
-      
       <script>
-        // Function to copy text to clipboard
         function copyToClipboard(text) {
-          if (!navigator.clipboard) {
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            textarea.style.position = 'fixed';
-            document.body.appendChild(textarea);
-            textarea.focus();
-            textarea.select();
-            try {
-              document.execCommand('copy');
-              alert('Markdown copied to clipboard!');
-            } catch (err) {
-              alert('Failed to copy Markdown.');
-            }
-            document.body.removeChild(textarea);
-            return;
-          }
-          navigator.clipboard.writeText(text).then(function() {
+          navigator.clipboard.writeText(text).then(() => {
             alert('Markdown copied to clipboard!');
-          }, function(err) {
+          }, () => {
             alert('Failed to copy Markdown.');
           });
         }
@@ -111,11 +71,9 @@ export default (function () {
     </html>
   `;
 
-  // 10. Create a Blob from the HTML content and generate a URL for it
+  // 10. Create Blob URL and open new tab
   const blob = new Blob([htmlContent], { type: 'text/html' });
   const blobUrl = URL.createObjectURL(blob);
-
-  // 11. Open a new tab using the Blob URL (isolated from the original page's context)
   const newTab = window.open(blobUrl, '_blank', 'noopener,noreferrer');
 
   if (!newTab) {
